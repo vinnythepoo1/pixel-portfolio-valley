@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Vinny's Pixel Town · GitHub Portfolio</title>
+    <meta name="description" content="A pixel-art fantasy town where every building is one of Vinny's GitHub data projects." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="game"></div>
+
+      <div id="ui">
+        <div id="hud" hidden>
+          <div class="hud-left box">
+            <div id="hud-clock">☀ 09:00 · Day 1</div>
+            <div id="hud-place">Town Plaza</div>
+          </div>
+          <div class="hud-right">
+            <button id="btn-journal" class="hud-btn" title="Explorer's Journal (J)">📜 <span id="hud-stamps">0/10</span></button>
+            <button id="btn-list" class="hud-btn" title="All projects (P)">📋 <span class="hide-sm">Projects</span></button>
+            <button id="btn-sound" class="hud-btn" title="Sound on/off (M)">🔇</button>
+            <button id="btn-help" class="hud-btn" title="Controls">?</button>
+          </div>
+        </div>
+
+        <div id="banner"><div id="banner-title"></div><div id="banner-sub"></div></div>
+        <div id="toasts"></div>
+        <div id="tooltip" hidden></div>
+
+        <div id="dialog" hidden>
+          <img id="dialog-portrait" alt="" />
+          <div class="dialog-body">
+            <div id="dialog-name"></div>
+            <div id="dialog-text"></div>
+          </div>
+          <div id="dialog-next">▼</div>
+        </div>
+
+        <div id="modal" hidden>
+          <div id="modal-card" class="modal-card" role="dialog" aria-modal="true"></div>
+        </div>
+
+        <div id="touch" hidden>
+          <div id="dpad">
+            <button data-dir="up" aria-label="Up">▲</button>
+            <button data-dir="left" aria-label="Left">◀</button>
+            <button data-dir="right" aria-label="Right">▶</button>
+            <button data-dir="down" aria-label="Down">▼</button>
+          </div>
+          <button id="btn-a" aria-label="Interact">A</button>
+        </div>
+
+        <div id="title">
+          <div class="title-card box">
+            <div class="title-kicker">Welcome, traveler</div>
+            <h1>Vinny's Pixel Town</h1>
+            <p>A little fantasy town where every building is one of my GitHub projects. Walk around, step inside, and talk to the townsfolk.</p>
+            <div class="title-actions">
+              <button id="btn-start" class="btn btn-primary">▶ Start adventure</button>
+              <button id="btn-skip" class="btn">📋 Skip to project list</button>
+            </div>
+            <div class="title-controls">WASD / arrow keys to walk · E or Space to interact · click to walk</div>
+          </div>
+        </div>
+
+        <div id="confetti"></div>
+      </div>
+    </div>
+
+    <noscript>
+      <p style="color:#fff;padding:16px">This portfolio is a small game and needs JavaScript. You can browse the projects directly on
+        <a style="color:#ffd75e" href="https://github.com/Vinnythepoo1">GitHub</a>.</p>
+    </noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
