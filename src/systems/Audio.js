@@ -50,6 +50,12 @@ const SFX = {
   purr: (t) => { for (let i = 0; i < 6; i++) tone(70 + (i % 2) * 8, t + i * 0.07, 0.08, 'sawtooth', 0.025); },
   fanfare: (t) => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, t + i * 0.12, i === 5 ? 0.6 : 0.14, 'square', 0.05)),
   open: (t) => { tone(523, t, 0.08, 'triangle', 0.08); tone(784, t + 0.07, 0.14, 'triangle', 0.08); },
+  pew: (t) => tone(900, t, 0.09, 'square', 0.03, 240),
+  boom: (t) => { tone(140, t, 0.3, 'sawtooth', 0.07, 40); tone(90, t + 0.05, 0.3, 'square', 0.04, 30); },
+  thud: (t) => tone(110, t, 0.12, 'sine', 0.12, 60),
+  jump: (t) => tone(320, t, 0.12, 'square', 0.035, 640),
+  crystal: (t) => [988, 1319, 1568, 1976].forEach((f, i) => tone(f, t + i * 0.06, 0.2, 'triangle', 0.05)),
+  warp: (t) => tone(200, t, 0.6, 'sawtooth', 0.05, 1600),
 };
 
 export const audio = {

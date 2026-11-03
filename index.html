@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Vinny's Pixel Town · GitHub Portfolio</title>
-    <meta name="description" content="A pixel-art fantasy town where every building is one of Vinny's GitHub data projects." />
+    <title>Vinny's Pixel Galaxy · Data Portfolio</title>
+    <meta name="description" content="A pixel-art space game portfolio: fly between planets, land, and collect data crystals from each of Vinny's data projects." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -16,16 +16,22 @@
       <div id="ui">
         <div id="hud" hidden>
           <div class="hud-left box">
-            <div id="hud-clock">☀ 09:00 · Day 1</div>
-            <div id="hud-place">Town Plaza</div>
+            <span title="Data crystals">💎 <b id="c-crystals">0/40</b></span>
+            <span title="Planets landed on">🪐 <b id="c-planets">0/10</b></span>
+            <span title="Stardust">✨ <b id="c-dust">0</b></span>
           </div>
           <div class="hud-right">
-            <button id="btn-journal" class="hud-btn" title="Explorer's Journal (J)">📜 <span id="hud-stamps">0/10</span></button>
-            <button id="btn-list" class="hud-btn" title="All projects (P)">📋 <span class="hide-sm">Projects</span></button>
-            <button id="btn-sound" class="hud-btn" title="Sound on/off (M)">🔇</button>
+            <button id="btn-orbit" class="hud-btn hud-gold" hidden>🚀 <span class="hide-sm">Return to orbit</span></button>
+            <button id="btn-missions" class="hud-btn" title="Mission board: all projects (P)">🗺 <span class="hide-sm">Missions</span></button>
+            <button id="btn-log" class="hud-btn" title="Logbook (L)">🏆</button>
+            <button id="btn-sound" class="hud-btn" title="Sound (M)">🔇</button>
             <button id="btn-help" class="hud-btn" title="Controls">?</button>
           </div>
         </div>
+
+        <canvas id="minimap" width="180" height="142" hidden aria-label="Galaxy map"></canvas>
+        <div id="energy" hidden title="Boost energy"><div></div></div>
+        <div id="target" hidden></div>
 
         <div id="banner"><div id="banner-title"></div><div id="banner-sub"></div></div>
         <div id="toasts"></div>
@@ -51,19 +57,20 @@
             <button data-dir="right" aria-label="Right">▶</button>
             <button data-dir="down" aria-label="Down">▼</button>
           </div>
+          <button id="btn-b" aria-label="Shoot / jump">B</button>
           <button id="btn-a" aria-label="Interact">A</button>
         </div>
 
         <div id="title">
-          <div class="title-card box">
-            <div class="title-kicker">Welcome, traveler</div>
-            <h1>Vinny's Pixel Town</h1>
-            <p>A little fantasy town where every building is one of my GitHub projects. Walk around, step inside, and talk to the townsfolk.</p>
+          <div class="title-card">
+            <div class="title-kicker">✦ Incoming transmission ✦</div>
+            <h1>Vinny's Pixel Galaxy</h1>
+            <p>Every planet in this galaxy is one of my data projects. Fly your ship, land on the planets, and collect the <b>data crystals</b> to uncover the charts and findings.</p>
             <div class="title-actions">
-              <button id="btn-start" class="btn btn-primary">▶ Start adventure</button>
-              <button id="btn-skip" class="btn">📋 Skip to project list</button>
+              <button id="btn-start" class="btn btn-primary">🚀 Launch</button>
+              <button id="btn-skip" class="btn">🗺 Skip to the projects</button>
             </div>
-            <div class="title-controls">WASD / arrow keys to walk · E or Space to interact · click to walk</div>
+            <div class="title-controls">WASD / arrows to fly · Space to shoot · Shift to boost · E to land</div>
           </div>
         </div>
 
@@ -75,6 +82,6 @@
       <p style="color:#fff;padding:16px">This portfolio is a small game and needs JavaScript. You can browse the projects directly on
         <a style="color:#ffd75e" href="https://github.com/Vinnythepoo1">GitHub</a>.</p>
     </noscript>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/galaxy/main.js"></script>
   </body>
 </html>

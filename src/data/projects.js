@@ -276,4 +276,50 @@ export const PROJECTS = [
 
 for (const p of PROJECTS) p.url = repoUrl(p.repo);
 
+// Data Observatory: each project is a constellation whose stars rearrange into a chart.
+// Chart types: bars (label, value, display text), waffle (percent of 100), timeline (year, text), findings (short texts).
+// Only use real numbers from the project here.
+export const SKY = {
+  shopee: {
+    name: 'Shopee Health & Wellness', constellation: 'The Potion', shape: 'potion',
+    chart: { type: 'bars', title: 'Listings before and after cleaning', items: [['Scraped', 68499, '68,499'], ['Kept', 2622, '2,622']] },
+  },
+  dataco: {
+    name: 'DataCo Supply Chain', constellation: 'The Crate', shape: 'crate',
+    chart: { type: 'bars', title: 'Share of orders delivered late', max: 100, items: [['All orders', 54.8, '54.8%'], ['First Class', 95.3, '95.3%']] },
+  },
+  'olist-delivery': {
+    name: 'Olist Delivery Analytics', constellation: 'The Letter', shape: 'letter',
+    chart: { type: 'bars', title: 'Average review score', max: 5, items: [['On time', 4.3, '4.30 ★'], ['Late', 2.61, '2.61 ★']] },
+  },
+  'olist-ecommerce': {
+    name: 'Olist E-commerce Analysis', constellation: 'The Coin', shape: 'coin',
+    chart: { type: 'bars', title: 'Late delivery rate', items: [['Overall', 8.11, '8.11%'], ['March 2018', 21.4, '21.4%']] },
+  },
+  'hr-attrition': {
+    name: 'HR Attrition Analysis', constellation: 'The Sword', shape: 'sword',
+    chart: { type: 'waffle', title: 'Out of every 100 employees…', pct: 16.1, caption: '16.1% left the company (1,470 employees analysed)' },
+  },
+  tableau: {
+    name: 'Seattle Airbnb (Tableau)', constellation: 'The Bed', shape: 'bed',
+    chart: { type: 'findings', title: 'What drives Seattle Airbnb revenue', items: ['6-bedroom listings are the priciest', 'Revenue peaks in late May & June', 'Zip code 98119 earns a premium'] },
+  },
+  gsheet: {
+    name: 'Bike Buyers (Google Sheets)', constellation: 'The Horseshoe', shape: 'horseshoe',
+    chart: { type: 'findings', title: 'Who buys bikes?', items: ['Mostly aged 30–50', 'Short commute: 0–5 miles', 'Pivot-table dashboard'] },
+  },
+  sql: {
+    name: 'Global Layoffs (SQL)', constellation: 'The Book', shape: 'book',
+    chart: { type: 'findings', title: 'From raw data to answers in SQL', items: ['Clean: duplicates, blanks, formats', 'Explore by company, industry, country, stage, year', 'Rank the top companies per year'] },
+  },
+  ivish: {
+    name: 'IVISN Brand Strategy', constellation: 'The Leaf', shape: 'leaf',
+    chart: { type: 'timeline', title: 'A brand over a century', items: [[1921, 'Herbal heritage begins'], [2021, 'Relaunch with SWOT & 4P plan']] },
+  },
+  thepthai: {
+    name: 'Thepthai Business Case', constellation: 'The Mortar', shape: 'mortar',
+    chart: { type: 'findings', title: 'The Thepthai story', items: ['Born in Songkhla', 'Grew after the 1997 crisis', 'The "green bean size" rule'] },
+  },
+};
+
 export const byId = (id) => PROJECTS.find((p) => p.id === id);

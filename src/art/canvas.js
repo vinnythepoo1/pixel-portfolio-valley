@@ -26,6 +26,7 @@ export function shade(hex, amt) {
 // A painter draws rectangles at an offset; mirrorW flips it horizontally inside a frame of that width.
 export function painter(ctx, ox = 0, oy = 0, mirrorW = 0) {
   const r = (x, y, w, h, c) => {
+    x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h);
     if (!c || w <= 0 || h <= 0) return;
     ctx.fillStyle = c;
     const X = mirrorW ? ox + mirrorW - x - w : ox + x;
