@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { byId, SKY, PROJECTS } from '../data/projects.js';
 import { PLANETS, SYSTEMS } from './data.js';
-import { genSurface } from './surfaceArt.js';
+import { genSurface, ASTRO } from './surfaceArt.js';
 import { genChar, ensureCharAnims } from '../art/sprites.js';
+import { bevel, OUTLINE } from '../art/canvas.js';
 import { state, bus, uiBlocked, consumeTouchA } from '../state.js';
 import { audio } from '../systems/Audio.js';
 import { say } from '../ui/DialogBox.js';
@@ -15,6 +16,8 @@ const FONT = { fontFamily: '"Pixelify Sans", monospace', fontSize: '10px', color
 const PLATFORMS = [[700, 205], [1050, 205], [1150, 165], [1650, 195], [1760, 155], [2050, 210], [2150, 175], [2250, 140]];
 const CRYSTALS = [[700, 186], [1150, 146], [1760, 136], [2250, 121]];
 const SPOTS = { ship: 150, terminal: 360, alien: 950, monolith: 1420, beacon: 2520 };
+// Physics toys [x, kind, dropHeight]: crates to push and climb, balls to kick and bounce on.
+const TOYS = [[560, 'box', 30], [640, 'ball', 60], [1220, 'box', 30], [1226, 'box', 70], [1290, 'ball', 40], [1880, 'ball', 80], [2120, 'box', 30], [2380, 'ball', 50]];
 
 // Weather particle settings per planet theme.
 const WEATHER = {
@@ -56,11 +59,14 @@ export default class PlanetScene extends Phaser.Scene {
       const st = this.add.image(Phaser.Math.Between(0, 1400), Phaser.Math.Between(0, 140), 'dot').setScrollFactor(0.02, 1).setScale(0.5).setAlpha(0.2).setDepth(-96);
       this.tweens.add({ targets: st, alpha: 0.7, duration: Phaser.Math.Between(800, 2400), yoyo: true, repeat: -1 });
     }
+    const clouds = this.add.tileSprite(0, 20, W, 90, `clouds_${p.id}`).setOrigin(0).setScrollFactor(0.12, 1).setAlpha(0.85).setDepth(-91);
+    this.tweens.add({ targets: clouds, tilePositionX: 512, duration: 90000, repeat: -1 });
     this.add.tileSprite(0, GY - 110, W, 120, `far_${p.id}`).setOrigin(0).setScrollFactor(0.25, 1).setDepth(-90);
     this.add.tileSprite(0, GY - 70, W, 90, `mid_${p.id}`).setOrigin(0).setScrollFactor(0.5, 1).setDepth(-80);
 
     // ground
     this.add.tileSprite(0, GY, W, 64, `gnd_${p.id}`).setOrigin(0).setDepth(5);
+    this.fg = this.add.tileSprite(0, GH - 32, W, 32, `fg_${p.id}`).setOrigin(0).setScrollFactor(1.3, 1).setDepth(25);
     const ground = this.add.rectangle(W / 2, GY + 32, W, 64);
     this.physics.add.existing(ground, true);
 
@@ -72,7 +78,8 @@ export default class PlanetScene extends Phaser.Scene {
       const key = `prop_${R.pick(s.props)}_${p.id}`;
       if (!this.textures.exists(key)) continue;
       const back = R.frac() < 0.4;
-      this.add.image(x, GY + (back ? -2 : 1), key).setOrigin(0.5, 1).setDepth(back ? -60 : 3).setTint(back ? 0xb0a8c8 : 0xffffff).setScale(back ? 0.85 : 1);
+      const img = this.add.image(x, GY + (back ? -2 : 1), key).setOrigin(0.5, 1).setDepth(back ? -60 : 3).setTint(back ? 0xb0a8c8 : 0xffffff).setScale(back ? 0.85 : 1);
+      if (!back) this.add.image(x, GY + 1, 'shadow').setDisplaySize(img.width * 1.1, 6).setDepth(2);
     }
 
     // platforms (you can jump up through them)
@@ -98,6 +105,9 @@ export default class PlanetScene extends Phaser.Scene {
     const k = p.keeper;
     const alienKey = genChar(this, `alien_${p.id}`, { ...k.look, skin: s.alien });
     ensureCharAnims(this, alienKey);
+    const atex = this.textures.get(alienKey);
+    if (!atex.bevelled && atex.getContext) { bevel(atex.getContext(), atex.width, atex.height, 16, OUTLINE); atex.refresh(); atex.bevelled = true; }
+    this.alienShadow = this.add.image(SPOTS.alien, GY + 1, 'shadow').setScale(0.6).setDepth(7);
     this.alien = this.add.sprite(SPOTS.alien, GY + 1, alienKey, 'down0').setOrigin(0.5, 1).setDepth(8);
     this.alienKey = alienKey;
     this.alienHome = SPOTS.alien;
@@ -120,19 +130,44 @@ export default class PlanetScene extends Phaser.Scene {
     // little critters hopping around
     this.critters = [];
     for (let i = 0; i < 5; i++) {
-      const c = this.add.image(R.between(300, W - 300), GY, 'critter').setOrigin(0.5, 1).setDepth(4).setTint(Phaser.Display.Color.HexStringToColor(s.top).color);
+      const c = this.physics.add.image(R.between(300, W - 300), GY - 10, 'critter').setDepth(4).setTint(Phaser.Display.Color.HexStringToColor(s.top).color);
+      c.body.setSize(10, 8).setBounce(0.25).setDragX(260).setCollideWorldBounds(true);
       c.dir = R.frac() < 0.5 ? -1 : 1;
       c.next = 0;
       this.critters.push(c);
     }
+    this.physics.add.collider(this.critters, ground);
 
     // player
     this.player = this.physics.add.sprite(SPOTS.ship + 40, GY - 20, 'astro', '0').setDepth(10);
-    this.player.body.setSize(10, 22).setOffset(3, 2);
+    this.player.body.setSize(10, 22).setOffset(4, 4);
+    this.playerShadow = this.add.image(this.player.x, GY + 1, 'shadow').setScale(0.7).setDepth(9);
+    this.dustFx = this.add.particles(0, 0, 'puff', { lifespan: 450, speedX: { min: -40, max: 40 }, speedY: { min: -18, max: -4 }, scale: { start: 0.5, end: 0 }, alpha: { start: 0.7, end: 0 }, tint: Phaser.Display.Color.HexStringToColor(s.top).color, emitting: false }).setDepth(11);
+    this.wasOnGround = true;
+    this.fallSpeed = 0;
     this.player.setCollideWorldBounds(true);
     this.physics.add.collider(this.player, ground);
     this.physics.add.collider(this.player, this.platforms, null, (pl, plat) => pl.body.velocity.y >= 0 && pl.body.bottom <= plat.body.top + 6);
     this.physics.add.overlap(this.player, this.crystals, (pl, c) => this.collect(c));
+
+    // physics toys
+    const oneWay = (o, plat) => o.body.velocity.y >= 0 && o.body.bottom <= plat.body.top + 6;
+    this.toys = [];
+    for (const [x, kind, drop] of TOYS) {
+      const t = this.physics.add.image(x, GY - drop, kind === 'box' ? 'phys_box' : 'phys_ball').setDepth(6);
+      t.kind = kind;
+      t.body.setCollideWorldBounds(true);
+      if (kind === 'box') { t.body.setSize(18, 18).setMass(2.2).setBounce(0.05).setDragX(700).setMaxVelocityX(170); }
+      else { t.body.setCircle(8).setMass(0.5).setBounce(0.72, 0.62).setDragX(70); t.kickedAt = 0; }
+      this.toys.push(t);
+    }
+    this.physics.add.collider(this.toys, ground);
+    this.physics.add.collider(this.toys, this.toys);
+    this.physics.add.collider(this.toys, this.platforms, null, oneWay);
+    this.physics.add.collider(this.critters, this.toys);
+    const boxes = this.toys.filter((t) => t.kind === 'box'), balls = this.toys.filter((t) => t.kind === 'ball');
+    this.physics.add.collider(this.player, boxes, () => { if (this.player.body.touching.down) this.jumps = 0; });
+    this.physics.add.overlap(this.player, balls, (pl, b) => this.hitBall(b));
     this.jumps = 0;
 
     this.jet = this.add.particles(0, 0, 'puff', { lifespan: 400, speedY: { min: 30, max: 60 }, speedX: { min: -20, max: 20 }, scale: { start: 0.6, end: 0 }, tint: [0xffd75e, 0xffffff], emitting: false }).setDepth(9);
@@ -141,7 +176,7 @@ export default class PlanetScene extends Phaser.Scene {
 
     this.prompt = this.add.image(0, 0, 'promptE').setDepth(40).setVisible(false);
     const cam = this.cameras.main;
-    cam.setBounds(0, 0, W, GH).setRoundPixels(true);
+    cam.setBounds(0, 0, W, GH).setRoundPixels(false);
     cam.startFollow(this.player, true, 0.1, 0.1);
     this.applyZoom();
     this.scale.on('resize', this.applyZoom, this);
@@ -186,6 +221,24 @@ export default class PlanetScene extends Phaser.Scene {
       blendMode: add ? 'ADD' : 'NORMAL',
     }).setDepth(20);
     this.weather = { emitter, fromRight, fromLeft };
+  }
+
+  // Stomp a ball to bounce high, or run into it to kick it.
+  hitBall(b) {
+    const pl = this.player, now = this.time.now;
+    if (now - b.kickedAt < 180) return;
+    b.kickedAt = now;
+    if (pl.body.velocity.y > 40 && pl.body.bottom < b.body.center.y) {
+      pl.body.setVelocityY(-this.jumpV * 1.15);
+      this.jumps = 1;
+      b.body.setVelocityY(Math.max(b.body.velocity.y, 0) + 160);
+      this.cameras.main.shake(70, 0.002);
+    } else {
+      const dir = Math.sign(b.x - pl.x) || 1;
+      const power = Math.max(140, Math.abs(pl.body.velocity.x) * 1.8);
+      b.body.setVelocity(dir * power, -120 - Math.abs(pl.body.velocity.x) * 0.6);
+    }
+    audio.sfx('jump');
   }
 
   // ---------------------------------------------------------------- actions
@@ -265,20 +318,41 @@ export default class PlanetScene extends Phaser.Scene {
     body.setVelocityX(body.velocity.x + (target - body.velocity.x) * Math.min(1, dt * (onGround ? 14 : 6)));
     if (dir) pl.setFlipX(dir < 0);
 
-    if (!blocked && (jumpKey || touchJump)) {
-      if (onGround || this.jumps < 2) {
-        if (!onGround && this.jumps === 0) this.jumps = 1;
-        this.jumps++;
-        body.setVelocityY(-this.jumpV);
-        audio.sfx('jump');
-        if (this.jumps === 2) this.jet.explode(8, pl.x, pl.y + 10);
-      }
+    // jump feel: coyote time, jump buffering, variable height, snappier falls
+    const pressed = !blocked && (jumpKey || touchJump);
+    this.jumpBuf = pressed ? 0.13 : (this.jumpBuf || 0) - dt;
+    this.coyote = onGround ? 0.1 : (this.coyote || 0) - dt;
+    const doJump = (n) => {
+      this.jumps = n; this.jumpBuf = 0; this.coyote = 0; this.canCut = true;
+      body.setVelocityY(-this.jumpV);
+      audio.sfx('jump');
+      if (n === 2) this.jet.explode(8, pl.x, pl.y + 10);
+    };
+    if (!blocked && this.jumpBuf > 0) {
+      if (this.coyote > 0 && this.jumps === 0) doJump(1);
+      else if (pressed && this.jumps < 2) doJump(2);
     }
+    const held = k.W.isDown || k.UP.isDown || k.SPACE.isDown || t.up || state.touchB;
+    if (this.canCut && !held && body.velocity.y < -this.jumpV * 0.35) { body.setVelocityY(body.velocity.y * 0.5); this.canCut = false; }
+    body.setGravityY(body.velocity.y > 0 ? this.s.gravity * 0.55 : 0);
+    body.maxVelocity.y = 560;
     if (!blocked && esc) this.leave();
 
-    if (!onGround) pl.anims.stop(), pl.setFrame('3');
+    if (!onGround) { pl.anims.stop(); pl.setFrame(String(body.velocity.y < 0 ? ASTRO.jump : ASTRO.fall)); }
     else if (Math.abs(body.velocity.x) > 20) pl.anims.play('astro-walk', true);
-    else { pl.anims.stop(); pl.setFrame('0'); }
+    else pl.anims.play('astro-idle', true);
+
+    // landing dust, and footstep puffs while running
+    if (onGround && !this.wasOnGround && this.fallSpeed > 150) this.dustFx.explode(Math.min(10, Math.round(this.fallSpeed / 50)), pl.x, pl.body.bottom);
+    if (onGround && Math.abs(body.velocity.x) > 100 && Math.random() < dt * 6) this.dustFx.emitParticleAt(pl.x - Math.sign(body.velocity.x) * 4, pl.body.bottom, 1);
+    this.fallSpeed = body.velocity.y;
+    this.wasOnGround = onGround;
+
+    // contact shadow on whatever is below the astronaut, shrinking with height
+    let floor = GY;
+    for (const [x, y] of PLATFORMS) if (Math.abs(pl.x - x) < 24 && y - 6 >= pl.body.bottom - 2 && y - 6 < floor) floor = y - 6;
+    const hgt = Math.max(0, floor - pl.body.bottom);
+    this.playerShadow.setPosition(pl.x, floor + 1).setScale(Math.max(0.25, 0.7 - hgt / 160)).setAlpha(Math.max(0.3, 1 - hgt / 120));
 
     // resident strolls a little around their spot
     if (this.alienBusy > 0) this.alienBusy -= delta;
@@ -287,18 +361,23 @@ export default class PlanetScene extends Phaser.Scene {
       if (Math.abs(this.alien.x - this.alienHome) > 40) this.alienDir *= -1;
       this.alien.anims.play(`${this.alienKey}-${this.alienDir > 0 ? 'right' : 'left'}`, true);
     }
+    this.alienShadow.x = this.alien.x;
 
-    // critters hop around and scatter from the player
+    // critters hop around (real jumps under gravity) and scatter from the player
     for (const c of this.critters) {
-      if (time > c.next) {
-        c.next = time + Phaser.Math.Between(600, 1800);
-        if (Math.abs(c.x - pl.x) < 60) c.dir = c.x < pl.x ? -1 : 1;
+      if (time > c.next && c.body.blocked.down) {
+        c.next = time + Phaser.Math.Between(500, 1600);
+        const scared = Math.abs(c.x - pl.x) < 60;
+        if (scared) c.dir = c.x < pl.x ? -1 : 1;
         else if (Math.random() < 0.3) c.dir *= -1;
+        if (c.x < 60) c.dir = 1; else if (c.x > W - 60) c.dir = -1;
         c.setFlipX(c.dir < 0);
-        this.tweens.add({ targets: c, x: Phaser.Math.Clamp(c.x + c.dir * Phaser.Math.Between(16, 40), 40, W - 40), duration: 400 });
-        this.tweens.add({ targets: c, y: GY - 10, duration: 200, yoyo: true, ease: 'Quad.easeOut' });
+        c.body.setVelocity(c.dir * Phaser.Math.Between(40, scared ? 120 : 70), -Phaser.Math.Between(scared ? 150 : 90, scared ? 200 : 140));
       }
     }
+
+    // balls roll
+    for (const b of this.toys) if (b.kind === 'ball') b.rotation += (b.body.velocity.x / 8) * dt;
 
     // weather follows the camera
     if (this.weather) {

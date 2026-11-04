@@ -158,3 +158,6 @@ canvas.chart { display: block; width: 100%; height: auto; margin: 10px 0; backgr
 @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01s !important; transition-duration: 0.01s !important; } }
+
+/* soft cinematic vignette over the game canvas */
+#game::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(3, 2, 18, 0.55) 100%); }

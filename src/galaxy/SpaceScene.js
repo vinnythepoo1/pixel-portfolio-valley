@@ -18,26 +18,27 @@ export default class SpaceScene extends Phaser.Scene {
 
   create() {
     const cam = this.cameras.main;
-    cam.setBackgroundColor('#05041a').setBounds(0, 0, WORLD.w, WORLD.h).setRoundPixels(true);
+    cam.setBackgroundColor('#05041a').setBounds(0, 0, WORLD.w, WORLD.h).setRoundPixels(false);
 
     // parallax starfields
-    this.bgLayers = [['stars1', 0.06], ['stars2', 0.18], ['stars3', 0.38]].map(([k, f], i) => {
+    this.bgLayers = [['stars1', 0.06], ['stars2', 0.18], ['stars3', 0.38], ['stars4', 0.3]].map(([k, f], i) => {
       const t = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, k).setOrigin(0).setScrollFactor(0).setDepth(-1000 + i);
       t.f = f;
       return t;
     });
+    this.tweens.add({ targets: this.bgLayers[3], alpha: 0.15, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
     // nebulae, suns and orbit rings
     const R = new Phaser.Math.RandomDataGenerator(['galaxy']);
     for (const [d, sys] of Object.entries(SYSTEMS)) {
-      this.add.image(sys.x, sys.y, `neb_${d}`).setScale(10).setAlpha(0.55).setBlendMode(Phaser.BlendModes.ADD).setDepth(-900);
+      this.add.image(sys.x, sys.y, `neb_${d}`).setScale(4).setAlpha(0.8).setBlendMode(Phaser.BlendModes.ADD).setDepth(-900);
       this.add.image(sys.x, sys.y, 'glow').setScale(7).setTint(Phaser.Display.Color.HexStringToColor(sys.sun).color).setAlpha(0.6).setBlendMode(Phaser.BlendModes.ADD).setDepth(-500);
       this.add.sprite(sys.x, sys.y, `sun_${d}`, '0').play(`sun_${d}`).setDepth(-400);
       this.add.text(sys.x, sys.y - 60, sys.name.toUpperCase(), { ...FONT, fontSize: '12px', color: sys.color }).setOrigin(0.5, 1).setResolution(3).setDepth(-300).setAlpha(0.85);
     }
     for (let i = 0; i < 6; i++) {
       const keys = ['neb_harbor', 'neb_market', 'neb_herbal'];
-      this.add.image(R.between(200, WORLD.w - 200), R.between(200, WORLD.h - 200), keys[i % 3]).setScale(R.between(5, 8)).setAlpha(0.25).setBlendMode(Phaser.BlendModes.ADD).setDepth(-950);
+      this.add.image(R.between(200, WORLD.w - 200), R.between(200, WORLD.h - 200), keys[i % 3]).setScale(R.between(2, 3)).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD).setDepth(-950);
     }
     const rings = this.add.graphics().setDepth(-450);
 
@@ -47,13 +48,13 @@ export default class SpaceScene extends Phaser.Scene {
       const col = Phaser.Display.Color.HexStringToColor(sys.color).color;
       rings.fillStyle(col, 0.22);
       for (let a = 0; a < Math.PI * 2; a += 5 / pd.orbit) rings.fillRect(sys.x + Math.cos(a) * pd.orbit, sys.y + Math.sin(a) * pd.orbit, 2, 2);
-      const pl = { p, pd, sys, angle: pd.start, size: pd.size };
+      const pl = { p, pd, sys, angle: pd.start, size: pd.size, x: sys.x + Math.cos(pd.start) * pd.orbit, y: sys.y + Math.sin(pd.start) * pd.orbit };
       if (pd.ring) {
         genRing(this, `ring_${p.id}`, pd.size, pd.look.c[1]);
         pl.ringBack = this.add.image(0, 0, `ring_${p.id}_back`).setDepth(-11);
         pl.ringFront = this.add.image(0, 0, `ring_${p.id}_front`).setDepth(-9);
       }
-      pl.sprite = this.add.sprite(0, 0, `pl_${p.id}`, '0').play({ key: `pl_${p.id}`, startFrame: Math.floor(Math.random() * 16) }).setDepth(-10);
+      pl.sprite = this.add.sprite(0, 0, `pl_${p.id}`, '0').play({ key: `pl_${p.id}`, startFrame: Math.floor(Math.random() * 24) }).setDepth(-10);
       pl.halo = this.add.image(0, 0, 'glow').setScale(pd.size / 26).setTint(Phaser.Display.Color.HexStringToColor(pd.look.c[1]).color).setAlpha(0.25).setBlendMode(Phaser.BlendModes.ADD).setDepth(-12);
       pl.label = this.add.text(0, 0, '', FONT).setOrigin(0.5, 1).setResolution(3).setDepth(50);
       return pl;
@@ -274,6 +275,12 @@ export default class SpaceScene extends Phaser.Scene {
       }
     }
 
+    // gravity: suns and planets pull the ship, so you can slingshot past them
+    if (!coursePl) {
+      for (const sys of Object.values(SYSTEMS)) this.pull(s, sys.x, sys.y, 560, 1.3e6, 90, dt, 130);
+      for (const pl of this.planets) this.pull(s, pl.x, pl.y, pl.size * 3.2, pl.size * 5200, 70, dt);
+    }
+
     // flight
     const thrusting = !!(ix || iy) || !!coursePl;
     if (ix || iy) {
@@ -290,6 +297,8 @@ export default class SpaceScene extends Phaser.Scene {
     const sp = Math.hypot(s.vx, s.vy);
     if (sp > cap) { s.vx *= cap / sp; s.vy *= cap / sp; }
     s.x += s.vx * dt; s.y += s.vy * dt;
+    // safety net: never let a bad number (NaN) blank the whole screen
+    if (![s.x, s.y, s.vx, s.vy].every(Number.isFinite)) { s.x = STATION.x; s.y = STATION.y + 110; s.vx = 0; s.vy = 0; }
     if (s.x < 20 || s.x > WORLD.w - 20) { s.vx *= -0.5; s.x = Phaser.Math.Clamp(s.x, 20, WORLD.w - 20); }
     if (s.y < 20 || s.y > WORLD.h - 20) { s.vy *= -0.5; s.y = Phaser.Math.Clamp(s.y, 20, WORLD.h - 20); }
     if (Math.abs(s.energy - this.lastEnergy) > 0.01) { this.lastEnergy = s.energy; bus.emit('energy', s.energy); }
@@ -311,6 +320,7 @@ export default class SpaceScene extends Phaser.Scene {
       const a = sprite.rotation, cx = Math.cos(a), cy = Math.sin(a);
       const b = this.add.image(s.x + cx * 14, s.y + cy * 14, 'bolt').setRotation(a).setDepth(18);
       this.bolts.push({ s: b, x: b.x, y: b.y, vx: cx * 560 + s.vx, vy: cy * 560 + s.vy, life: 0.9 });
+      s.vx -= cx * 6; s.vy -= cy * 6; // recoil
       audio.sfx('pew');
     }
     for (const b of this.bolts) {
@@ -337,24 +347,48 @@ export default class SpaceScene extends Phaser.Scene {
       }
     }
 
-    // asteroids
+    // asteroids: drift, stay loosely inside their belt, collide with each other and the ship
+    const SHIP_M = 3;
     for (const a of this.asteroids) {
       a.x += a.vx * dt; a.y += a.vy * dt;
       const bt = a.belt;
-      if (a.x < bt.x || a.x > bt.x + bt.w) a.vx *= -1;
-      if (a.y < bt.y || a.y > bt.y + bt.h) a.vy *= -1;
+      if (a.x < bt.x) a.vx += 30 * dt; else if (a.x > bt.x + bt.w) a.vx -= 30 * dt;
+      if (a.y < bt.y) a.vy += 30 * dt; else if (a.y > bt.y + bt.h) a.vy -= 30 * dt;
+      const sp = Math.hypot(a.vx, a.vy);
+      if (sp > 90) { a.vx *= Math.exp(-0.8 * dt); a.vy *= Math.exp(-0.8 * dt); }
+      a.spin *= Math.exp(-0.15 * dt);
       a.s.setPosition(a.x, a.y).setRotation(a.s.rotation + a.spin * dt);
-      const dx = s.x - a.x, dy = s.y - a.y, d = Math.hypot(dx, dy);
+    }
+    const list = this.asteroids;
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i];
+      for (let j = i + 1; j < list.length; j++) {
+        const b = list[j];
+        const dx = b.x - a.x, dy = b.y - a.y, rr = a.r + b.r;
+        if (Math.abs(dx) > rr || Math.abs(dy) > rr) continue;
+        const d = Math.hypot(dx, dy);
+        if (d >= rr || d === 0) continue;
+        this.collide(a, b, dx / d, dy / d, rr - d, 0.85);
+      }
+      // ship vs asteroid (the ship is a circle of radius 8)
+      const dx = a.x - s.x, dy = a.y - s.y, d = Math.hypot(dx, dy);
       if (d < a.r + 8 && d > 0) {
         const nx = dx / d, ny = dy / d;
-        s.x = a.x + nx * (a.r + 8); s.y = a.y + ny * (a.r + 8);
-        const vn = s.vx * nx + s.vy * ny;
-        if (vn < 0) { s.vx -= 1.6 * vn * nx; s.vy -= 1.6 * vn * ny; a.vx += vn * nx * 0.2; a.vy += vn * ny * 0.2; }
-        if (time > this.thudAt) { this.thudAt = time + 250; audio.sfx('thud'); this.cameras.main.shake(90, 0.003); }
+        const impact = (s.vx - a.vx) * nx + (s.vy - a.vy) * ny;
+        const ship = { x: s.x, y: s.y, vx: s.vx, vy: s.vy, m: SHIP_M };
+        this.collide(ship, a, nx, ny, a.r + 8 - d, 0.6);
+        s.x = ship.x; s.y = ship.y; s.vx = ship.vx; s.vy = ship.vy;
+        if (impact > 230 && a.size < 2) { a.hp = 0; a.hit = true; this.cameras.main.shake(140, 0.006); }
+        else if (time > this.thudAt && impact > 20) { this.thudAt = time + 250; audio.sfx('thud'); this.cameras.main.shake(90, Math.min(0.006, impact / 40000)); }
       }
       for (const b of this.bolts) {
         if (b.life <= 0) continue;
-        if (Math.hypot(b.x - a.x, b.y - a.y) < a.r + 3) { b.life = 0; a.hp--; a.hit = true; }
+        if (Math.hypot(b.x - a.x, b.y - a.y) < a.r + 3) {
+          b.life = 0; a.hp--; a.hit = true;
+          const m = this.massOf(a);
+          a.vx += (b.vx - s.vx) * 0.06 / m * 4; a.vy += (b.vy - s.vy) * 0.06 / m * 4;
+          a.spin += (Math.random() - 0.5) * 3 / m;
+        }
       }
     }
     for (const a of this.asteroids.filter((x) => x.hit)) {
@@ -429,9 +463,46 @@ export default class SpaceScene extends Phaser.Scene {
     return true;
   }
 
+  // Accelerates body b toward (x, y) inside `range`, with an inverse-square pull capped at `max`.
+  // Inside `calm` the pull fades out, so a parked ship never slides into a sun.
+  pull(b, x, y, range, k, max, dt, calm = 0) {
+    const dx = x - b.x, dy = y - b.y, d2 = dx * dx + dy * dy;
+    if (d2 > range * range || d2 < 1) return;
+    if (!Number.isFinite(d2)) return;
+    const d = Math.sqrt(d2), acc = Math.min(max, k / d2) * (1 - d / range) * (calm ? Math.min(1, Math.max(0, (d - calm * 0.6) / (calm * 0.4))) : 1);
+    b.vx += (dx / d) * acc * dt; b.vy += (dy / d) * acc * dt;
+  }
+
+  massOf(o) { return o.m ?? (o.r * o.r) / 16; }
+
+  // Elastic-ish collision between two circles along normal (nx, ny) pointing from a to b.
+  collide(a, b, nx, ny, overlap, restitution) {
+    const ma = this.massOf(a), mb = this.massOf(b), inv = 1 / ma + 1 / mb;
+    a.x -= nx * overlap * (1 / ma) / inv; a.y -= ny * overlap * (1 / ma) / inv;
+    b.x += nx * overlap * (1 / mb) / inv; b.y += ny * overlap * (1 / mb) / inv;
+    const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+    if (rel >= 0) return;
+    const j = (-(1 + restitution) * rel) / inv;
+    a.vx -= (j / ma) * nx; a.vy -= (j / ma) * ny;
+    b.vx += (j / mb) * nx; b.vy += (j / mb) * ny;
+    // glancing hits set rocks spinning
+    const tang = (b.vx - a.vx) * -ny + (b.vy - a.vy) * nx;
+    if (a.spin !== undefined) a.spin += tang * 0.004;
+    if (b.spin !== undefined) b.spin -= tang * 0.004;
+  }
+
   breakAsteroid(a) {
     a.s.destroy();
     this.boom.explode(a.size * 6 + 6, a.x, a.y);
+    // shockwave pushes nearby rocks and the ship
+    const blast = 60 + a.size * 30;
+    for (const o of [...this.asteroids, this.ship]) {
+      if (o === a) continue;
+      const dx = o.x - a.x, dy = o.y - a.y, d = Math.hypot(dx, dy);
+      if (d > blast || d < 1) continue;
+      const f = (1 - d / blast) * 90 / (o.r ? this.massOf(o) : 3);
+      o.vx += (dx / d) * f; o.vy += (dy / d) * f;
+    }
     audio.sfx('boom');
     if (a.size > 0) {
       for (let i = 0; i < 2; i++) {

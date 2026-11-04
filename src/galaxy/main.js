@@ -35,8 +35,10 @@ fontReady.then(() => {
     parent: 'game',
     backgroundColor: '#05041a',
     pixelArt: true,
+    roundPixels: false, // sub-pixel camera motion: no jitter while the camera eases after the player
+    fps: { smoothStep: true },
     scale: { mode: Phaser.Scale.RESIZE, width: window.innerWidth, height: window.innerHeight },
-    physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false } },
+    physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false, fixedStep: false } },
     scene: [GalaxyBoot, SpaceScene, PlanetScene],
   });
 });
